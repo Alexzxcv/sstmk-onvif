@@ -1,0 +1,67 @@
+public_ip: 127.0.0.1
+lan_if: br-lan
+device_path: /onvif/device_service
+events_path: /onvif/events
+
+web:
+  host: 127.0.0.1
+  port: 8080
+  static_dir: ./webui/dist
+  config_path: ./webui/config
+
+devices:
+  - id: gate-001
+    name: Frame-Detector-001
+    vendor: SSTMK
+    model: Frame-Detector
+    firmware: 1.0.0
+    serial: FD-0001
+    hardware: HW-FD-01
+    location: area/A1
+    type_scope: MetalDetector
+    port: 9001
+    adapter: tcp
+    adapterDS: 192.168.31.254:9001
+    enabled: true
+    
+  - id: gate-002
+    name: Frame-Detector-002
+    vendor: SSTMK
+    model: Frame-Detector
+    firmware: 1.0.0
+    serial: FD-0002
+    hardware: HW-FD-01
+    location: area/A1
+    type_scope: MetalDetector
+    port: 9002
+    adapter: tcp
+    adapterDS: 192.168.31.254:9002
+    enabled: true
+
+  - id: gate-003
+    name: Frame-Detector-003
+    vendor: SSTMK
+    model: Frame-Detector
+    firmware: 1.0.0
+    serial: FD-0003
+    hardware: HW-FD-01
+    location: area/A1
+    type_scope: MetalDetector
+    port: 9003
+    adapter: tcp
+    adapterDS: 192.168.31.254:9003
+    enabled: true
+
+  - id: gate-004
+    name: Frame-Detector-004
+    vendor: SSTMK
+    model: Frame-Detector
+    firmware: 1.0.0
+    serial: FD-0004
+    hardware: HW-FD-01
+    location: area/A1
+    type_scope: MetalDetector
+    port: 9004
+    adapter: tcp
+    adapterDS: 192.168.31.254:9004
+    enabled: true
