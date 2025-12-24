@@ -17,7 +17,7 @@ type Device struct {
 	AdapterDS string `yaml:"adapterDS"   json:"adapter_ds"`
 
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled"`
-	Online  bool `yaml:"-"                 json:"online"` // только рантайм
+	Online  bool `yaml:"-"                 json:"online"`
 }
 
 type Store struct {

@@ -7,10 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"sstmk-onvif/internal/events"
-	"sstmk-onvif/internal/state"
 	"strings"
 	"time"
+
+	"sstmk-onvif/internal/events"
+	"sstmk-onvif/internal/state"
 )
 
 // /api/v1/health
@@ -209,7 +210,7 @@ func (s *Server) handleEventsStream(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("sse: client disconnected")
+			// log.Println("sse: client disconnected")
 			return
 
 		case <-heartbeat.C:
