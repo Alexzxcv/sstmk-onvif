@@ -70,8 +70,8 @@ func New(cfg config.WebConfig, reg *registry.Store, evbuf events.Buffer, hub *hu
 		Handler:           withCommonHeaders(mux),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		// WriteTimeout:      30 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 	return s
 }

@@ -1,6 +1,9 @@
 package registry
 
-import "sync"
+import (
+	"net"
+	"sync"
+)
 
 type Device struct {
 	ID        string `yaml:"id"          json:"id"`
@@ -90,4 +93,11 @@ func (s *Store) ListVisible() []Device {
 		}
 	}
 	return out
+}
+
+func (s *Store) RegisterOrUpdate(uid string, addr net.Addr) bool {
+	s.mu.Lock() // Блокируем на запись
+	defer s.mu.Unlock()
+
+	return true // Новое устройство
 }

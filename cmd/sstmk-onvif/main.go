@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 	"os/signal"
-	"sstmk-onvif/internal/adapters/udp"
 	"syscall"
+
+	"sstmk-onvif/internal/adapters/udp"
 
 	"sstmk-onvif/internal/bootstrap"
 	"sstmk-onvif/internal/config"
@@ -91,9 +92,7 @@ func main() {
 	}()
 
 	go func() {
-		// путь пока захардкожен, потом можно взять из cfg.TTY.Device
 		ttyCfg := tty.Config{
-			// Device: "/dev/ttyACM0", // или /dev/ttyUSB0 / COM3 и т.п.
 			Device: "/tmp/ttyV0",
 		}
 		if err := tty.Start(ctx, ttyCfg, evbuf); err != nil {
