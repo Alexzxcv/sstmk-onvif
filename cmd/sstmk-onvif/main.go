@@ -38,26 +38,25 @@ func main() {
 	reg := registry.NewStore()
 	for _, d := range st.Devices {
 		reg.Upsert(registry.Device{
-			ID:        d.ID,
-			Name:      d.Name,
-			Vendor:    d.Vendor,
-			Model:     d.Model,
-			Firmware:  d.Firmware,
-			Serial:    d.Serial,
-			Hardware:  d.Hardware,
-			Location:  d.Location,
-			TypeScope: d.TypeScope,
-			Port:      d.Port,
-			Adapter:   d.Adapter,
-			AdapterDS: d.AdapterDS,
+			UID:          d.UID,
+			SerialNumber: d.SerialNumber,
+			Name:         d.Name,
+			Vendor:       d.Vendor,
+			Object:       d.Object,
+			IP:           d.IP,
+			Port:         d.Port,
+			Version:      d.Version,
+			Model:        d.Model,
+			Revision:     d.Revision,
+			Adapter:      d.Adapter,
+			AdapterDS:    d.AdapterDS,
 		})
-
 		// Восстанавливаем enabled из state.json
-		reg.SetEnabled(d.ID, d.Enabled)
+		reg.SetEnabled(d.UID, d.Enabled)
 
 		// Онлайн можно либо брать из state, либо форсить true/false.
 		// Сейчас, как у тебя раньше, просто делаем true.
-		reg.SetOnline(d.ID, true)
+		reg.SetOnline(d.UID, true)
 	}
 
 	evbuf := events.NewRing(1024)

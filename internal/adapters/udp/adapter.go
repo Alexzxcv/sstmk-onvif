@@ -36,11 +36,15 @@ type BinaryDiscoveryPacket struct {
 	Model    [32]byte
 }
 
-type BinaryEventPacket struct {
-	Cmd    uint8   // 0x05
-	TS     uint32  // Timestamp
-	Status [1]byte // Вложенная структура статуса
-	Zones  [1]byte // Вложенная структура зон
+const (
+	N_COILS_PER_SIDE = 6
+	N_COIL_SIDES     = 2
+)
+
+type ClassificationResult struct {
+	Type   uint32
+	Class  uint32
+	Object uint32
 }
 
 type DetectorStatus struct {
@@ -49,32 +53,35 @@ type DetectorStatus struct {
 	Out            uint32
 	Inside         uint32
 	Speed          float32
-	CalibTimout    uint32
+	CalibTimeout   uint32
 	Level          uint32
 	Lights         uint32
-	Classification struct {
-		DetectorMetalType  uint32
-		DetectorMetalClass uint32
-		DetectorObjectType uint32
-	}
-	Metal struct {
-		alarms     uint32
-		alarms_in  uint32
-		alarms_out uint32
+	Classification ClassificationResult
+	Metal          struct {
+		Alarms    uint32
+		AlarmsIn  uint32
+		AlarmsOut uint32
 	}
 }
 
-type ZonesConfig struct {
-	Zones_h uint8
-	Zones_v uint8
-	Total   uint8
+type ZoneConfig struct {
+	ZonesH uint32
+	ZonesV uint32
+	Total  uint32
 }
 
 type DetectorZones struct {
-	Config ZonesConfig
-	Alarm  uint32
-	Level  uint8
-	Cnt    uint32
+	Config ZoneConfig
+	Alarm  [N_COILS_PER_SIDE][N_COIL_SIDES]ClassificationResult
+	Level  [N_COILS_PER_SIDE][N_COIL_SIDES]uint8
+	Cnt    [N_COILS_PER_SIDE][N_COIL_SIDES]uint32
+}
+
+type BinaryEventPacket struct {
+	Cmd    uint8
+	TS     uint32
+	Status DetectorStatus
+	Zones  DetectorZones
 }
 
 func Start(ctx context.Context, reg *registry.Store, evbuf events.Buffer) error {
@@ -153,7 +160,7 @@ func handleMessage(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf ev
 	case BP_CMD_DISCOVERY:
 		handleRegistration(data, addr, reg, evbuf)
 	case BP_CMD_EVENT_NOTIFICATION:
-		// handleEvent(data, addr, reg, evbuf)
+		handleEvent(data, addr, reg, evbuf)
 	}
 }
 
@@ -161,6 +168,7 @@ func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evb
 	var msg BinaryDiscoveryPacket
 	reader := bytes.NewReader(data)
 	// log.Printf("%v", reader)
+	// log.Printf("%v", addr)
 	if err := binary.Read(reader, binary.LittleEndian, &msg); err != nil {
 		log.Printf("Ошибка парсинга discovery: %v", err)
 		return
@@ -170,72 +178,65 @@ func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evb
 		return string(bytes.TrimRight(b, "\x00"))
 	}
 
-	serial := cleanStr(msg.SN[:])
-
-	uid := cleanStr(msg.UID[:])
+	// reg.RegisterOrUpdate()
 
 	dev := registry.Device{
-		ID:        serial,
-		Name:      cleanStr(msg.Name[:]),
-		Vendor:    cleanStr(msg.Vendor[:]),
-		Model:     cleanStr(msg.Model[:]),
-		Firmware:  cleanStr(msg.Version[:]),
-		Serial:    serial,
-		Hardware:  cleanStr(msg.Revision[:]),
-		Location:  cleanStr(msg.Object[:]),
-		TypeScope: "MetalDetector",
-		AdapterDS: fmt.Sprintf("%s:%d", addr.IP.String(), msg.Port),
-		Adapter:   "udp",
-		Enabled:   true,
-		Online:    true,
+		UID:          fmt.Sprintf("%d", msg.UID),
+		SerialNumber: cleanStr(msg.SN[:]),
+		Name:         cleanStr(msg.Name[:]),
+		Vendor:       cleanStr(msg.Vendor[:]),
+		Object:       cleanStr(msg.Object[:]),
+		IP:           net.IP(msg.IP[:]).String(),
+		Port:         fmt.Sprintf("%d", msg.Port),
+		Version:      cleanStr(msg.Version[:]),
+		Model:        cleanStr(msg.Model[:]),
+		Revision:     cleanStr(msg.Revision[:]),
+		Adapter:      "udp",
+		AdapterDS:    fmt.Sprintf("%s:%d", addr.IP.String(), msg.Port),
+		Enabled:      true,
+		Online:       true,
 	}
+
 	test, _ := json.MarshalIndent(dev, "", "  ")
 	fmt.Println(string(test))
 	reg.Upsert(dev)
 
 	evbuf.Push(events.Event{
-		DeviceID: dev.ID,
+		DeviceID: dev.UID,
 		Topic:    "system/discovery",
-		Payload:  []byte(fmt.Sprintf("Device %s discovered at %s", dev.ID, addr.IP.String())),
+		Payload:  []byte(fmt.Sprintf("Device %s discovered at %s", dev.UID, addr.IP.String())),
 		Time:     time.Now(),
 	})
+
 }
 
-// func handleEvent(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf events.Buffer) {
-// 	var msg BinaryEventPacket
-// 	reader := bytes.NewReader(data)
-//
-// 	// Читаем бинарные данные
-// 	if err := binary.Read(reader, binary.LittleEndian, &msg); err != nil {
-// 		log.Printf("Ошибка парсинга event: %v", err)
-// 		return
-// 	}
-//
-// 	// Создаем структуру для красивого вывода (DebugDTO)
-// 	// Поля ОБЯЗАТЕЛЬНО с Большой Буквы для JSON
-// 	type DebugEvent struct {
-// 		Cmd    uint8
-// 		TS     uint32
-// 		Status string
-// 		Zones  string
-// 	}
-//
-// 	// Заполняем данными как есть (без преобразования в string)
-// 	debugData := DebugEvent{
-// 		Cmd:    msg.Cmd,
-// 		TS:     msg.TS,
-// 		Status: DetectorStatus,
-// 		Zones:  DetectorZones,
-// 	}
-//
-// 	// Маршалим в JSON
-// 	jsonBytes, err := json.MarshalIndent(debugData, "", "  ")
-// 	if err != nil {
-// 		log.Printf("JSON error: %v", err)
-// 		return
-// 	}
-//
-// 	fmt.Println(string(jsonBytes))
-//
-// 	// ... Дальше ваша логика обработки события ...
-// }
+func handleEvent(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf events.Buffer) {
+	log.Printf("%x", data)
+	r := bytes.NewReader(data)
+
+	var msg BinaryEventPacket
+
+	binary.Read(r, binary.LittleEndian, &msg.Cmd)
+	binary.Read(r, binary.LittleEndian, &msg.TS)
+	binary.Read(r, binary.LittleEndian, &msg.Status.State)
+	binary.Read(r, binary.LittleEndian, &msg.Status.In)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Out)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Inside)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Speed)
+	binary.Read(r, binary.LittleEndian, &msg.Status.CalibTimeout)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Level)
+
+	binary.Read(r, binary.LittleEndian, &msg.Status.Lights)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Classification)
+	binary.Read(r, binary.LittleEndian, &msg.Status.Metal)
+	binary.Read(r, binary.LittleEndian, &msg.Zones.Config)
+	binary.Read(r, binary.LittleEndian, &msg.Zones.Alarm)
+	binary.Read(r, binary.LittleEndian, &msg.Zones.Level)
+	binary.Read(r, binary.LittleEndian, &msg.Zones.Cnt)
+
+	// ---
+	jsonBytes, _ := json.MarshalIndent(msg, "", "  ")
+	fmt.Println(string(jsonBytes))
+	// ---
+
+}

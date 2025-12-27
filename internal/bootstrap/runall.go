@@ -46,9 +46,9 @@ func RunAll(ctx context.Context, cfg *config.Config, reg *registry.Store, buf ev
 		if !ok {
 			continue
 		}
-		ad, err := f(m.ID, m.AdapterDS, sink)
+		ad, err := f(m.UID, m.AdapterDS, sink)
 		if err != nil {
-			log.Printf("adapter %s: %v", m.ID, err)
+			log.Printf("adapter %s: %v", m.UID, err)
 			continue
 		}
 		wg.Add(1)

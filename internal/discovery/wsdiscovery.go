@@ -110,7 +110,7 @@ func runWSDiscovery(ctx context.Context, cfg *config.Config, reg *registry.Store
 			x := fmt.Sprintf("http://%s:%d%s", localIP, m.Port, cfg.DevicePath)
 			scopes := fmt.Sprintf(
 				"onvif://www.onvif.org/name/%s onvif://www.onvif.org/type/%s",
-				m.Name, m.TypeScope,
+				m.Name, m.Model,
 			)
 
 			one := matchXML(probeMatch{

@@ -1,26 +1,27 @@
 package registry
 
 import (
-	"net"
+	"encoding/json"
+	"fmt"
+	"log"
 	"sync"
 )
 
 type Device struct {
-	ID        string `yaml:"id"          json:"id"`
-	Name      string `yaml:"name"        json:"name"`
-	Vendor    string `yaml:"vendor"      json:"vendor"`
-	Model     string `yaml:"model"       json:"model"`
-	Firmware  string `yaml:"firmware"    json:"firmware"`
-	Serial    string `yaml:"serial"      json:"serial"`
-	Hardware  string `yaml:"hardware"    json:"hardware"`
-	Location  string `yaml:"location"    json:"location"`
-	TypeScope string `yaml:"type_scope"  json:"type_scope"`
-	Port      int    `yaml:"port"        json:"port"`
-	Adapter   string `yaml:"adapter"     json:"adapter"`
-	AdapterDS string `yaml:"adapterDS"   json:"adapter_ds"`
-
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled"`
-	Online  bool `yaml:"-"                 json:"online"`
+	UID          string `yaml:"uid"          json:"uid"`
+	SerialNumber string `yaml:"serialNumber" json:"serialNumber"`
+	Name         string `yaml:"name"         json:"name"`
+	Vendor       string `yaml:"vendor"       json:"vendor"`
+	Object       string `yaml:"object"       json:"object"` // location
+	IP           string `yaml:"ip"           json:"ip"`
+	Port         string `yaml:"port"         json:"port"`
+	Version      string `yaml:"version"      json:"version"` // fw
+	Model        string `yaml:"model"        json:"model"`
+	Revision     string `yaml:"revision"     json:"revision"` // hw
+	Adapter      string `yaml:"adapter"      json:"adapter"`
+	AdapterDS    string `yaml:"adapterDS"    json:"adapter_ds"`
+	Enabled      bool   `yaml:"enabled"      json:"enabled"`
+	Online       bool   `yaml:"-"            json:"online"`
 }
 
 type Store struct {
@@ -42,7 +43,7 @@ func (s *Store) Get(id string) (Device, bool) {
 func (s *Store) Upsert(m Device) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.data[m.ID] = m
+	s.data[m.UID] = m
 }
 
 func (s *Store) Update(m Device) {
@@ -95,9 +96,22 @@ func (s *Store) ListVisible() []Device {
 	return out
 }
 
-func (s *Store) RegisterOrUpdate(uid string, addr net.Addr) bool {
-	s.mu.Lock() // Блокируем на запись
-	defer s.mu.Unlock()
+func (s *Store) RegisterOrUpdate() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return true // Новое устройство
+	// хотим вывести все девайсы в виде JSON-массива
+	devices := make([]Device, 0, len(s.data))
+	for _, d := range s.data {
+		devices = append(devices, d)
+	}
+
+	b, err := json.MarshalIndent(devices, "", "  ")
+	if err != nil {
+		log.Printf("store json marshal error: %v", err)
+		return false
+	}
+
+	fmt.Println(string(b))
+	return true
 }

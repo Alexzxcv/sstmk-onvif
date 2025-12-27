@@ -45,7 +45,7 @@ func StartAll(ctx context.Context, cfg *config.Config, reg *registry.Store) erro
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Printf("httpdev: server %s error: %v", id, err)
 			}
-		}(m.ID)
+		}(m.UID)
 
 		// graceful shutdown
 		go func() {
@@ -172,7 +172,7 @@ func soapResponseGetScopesFor(m registry.Device) string {
   <tds:Scopes><tt:ScopeDef>Fixed</tt:ScopeDef><tt:ScopeItem>onvif://www.onvif.org/name/%s</tt:ScopeItem></tds:Scopes>
   <tds:Scopes><tt:ScopeDef>Fixed</tt:ScopeDef><tt:ScopeItem>onvif://www.onvif.org/type/%s</tt:ScopeItem></tds:Scopes>
   <tds:Scopes><tt:ScopeDef>Fixed</tt:ScopeDef><tt:ScopeItem>onvif://www.onvif.org/location/%s</tt:ScopeItem></tds:Scopes>
-</tds:GetScopesResponse>`, m.Name, m.TypeScope, m.Location)
+</tds:GetScopesResponse>`, m.Name, m.Model, m.Object)
 	return soapEnvelope(b)
 }
 
@@ -184,7 +184,7 @@ func soapResponseGetDeviceInformationFor(m registry.Device) string {
   <tds:FirmwareVersion>%s</tds:FirmwareVersion>
   <tds:SerialNumber>%s</tds:SerialNumber>
   <tds:HardwareId>%s</tds:HardwareId>
-</tds:GetDeviceInformationResponse>`, m.Vendor, m.Model, m.Firmware, m.Serial, m.Hardware)
+</tds:GetDeviceInformationResponse>`, m.Vendor, m.Model, m.Vendor, m.SerialNumber, m.Revision)
 	return soapEnvelope(b)
 }
 
