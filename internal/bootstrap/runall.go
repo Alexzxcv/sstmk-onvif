@@ -28,17 +28,21 @@ func RunAll(ctx context.Context, cfg *config.Config, reg *registry.Store, buf ev
 		"tcp": tcp.New,
 	}
 
-	// 1) поднимаем HTTP-серверы для каждого устройства
+	// 1) Запуск мониторинга устройств
+	go reg.StartMonitoring(ctx, 30*time.Second)
+	log.Printf("[Bootstrap] Device monitoring started (interval: 30s)")
+
+	// 2) поднимаем HTTP-серверы для каждого устройства
 	if err := httpdev.StartAll(ctx, cfg, reg); err != nil {
 		return err
 	}
 
-	// 2) WS-Discovery
+	// 3) WS-Discovery
 	if err := discovery.Start(ctx, cfg, reg); err != nil {
 		return err
 	}
 
-	// 3) Адаптеры (получение сырых данных)
+	// 4) Адаптеры (получение сырых данных)
 	var wg sync.WaitGroup
 	sink := &sinkImpl{buf: buf}
 	for _, m := range reg.List() {

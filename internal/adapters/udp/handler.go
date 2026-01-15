@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
+	"path/filepath"
 	"time"
 
 	"sstmk-onvif/internal/events"
@@ -18,8 +18,6 @@ import (
 func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf events.Buffer) {
 	var msg BinaryDiscoveryPacket
 	reader := bytes.NewReader(data)
-	// log.Printf("%v", reader)
-	// log.Printf("%v", addr)
 	if err := binary.Read(reader, binary.LittleEndian, &msg); err != nil {
 		log.Printf("Ошибка парсинга discovery: %v", err)
 		return
@@ -29,8 +27,6 @@ func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evb
 		return string(bytes.TrimRight(b, "\x00"))
 	}
 
-	// reg.RegisterOrUpdate()
-
 	dev := registry.Device{
 		UID:          fmt.Sprintf("%d", msg.UID),
 		SerialNumber: cleanStr(msg.SN[:]),
@@ -38,19 +34,29 @@ func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evb
 		Vendor:       cleanStr(msg.Vendor[:]),
 		Object:       cleanStr(msg.Object[:]),
 		IP:           net.IP(msg.IP[:]).String(),
-		Port:         fmt.Sprintf("%d", msg.Port),
-		Version:      cleanStr(msg.Version[:]),
-		Model:        cleanStr(msg.Model[:]),
-		Revision:     cleanStr(msg.Revision[:]),
-		Adapter:      "udp",
-		AdapterDS:    fmt.Sprintf("%s:%d", addr.IP.String(), msg.Port),
-		Enabled:      true,
-		Online:       true,
+		// Port будет назначен автоматически в Upsert
+		Version:   cleanStr(msg.Version[:]),
+		Model:     cleanStr(msg.Model[:]),
+		Revision:  cleanStr(msg.Revision[:]),
+		Adapter:   "udp",
+		AdapterDS: fmt.Sprintf("%s:%d", addr.IP.String(), msg.Port),
+		Enabled:   true,
+		Online:    true,
 	}
 
-	test, _ := json.MarshalIndent(dev, "", "  ")
-	fmt.Println(string(test))
 	reg.Upsert(dev)
+
+	// Получаем обновленное устройство с назначенным портом
+	if updated, ok := reg.Get(dev.UID); ok {
+		log.Printf("[UDP] Device %s registered with port %s", updated.UID, updated.Port)
+		// jsonData, err := json.MarshalIndent(updated, "", "    ")
+		// if err != nil {
+		// 	log.Printf("Error marshalling to JSON: %v", err)
+		// } else {
+		// 	// Выводим информацию об устройстве
+		// 	log.Printf("[UDP] Device info:\n%s", string(jsonData))
+		// }
+	}
 
 	evbuf.Push(events.Event{
 		DeviceID: dev.UID,
@@ -61,12 +67,13 @@ func handleRegistration(data []byte, addr *net.UDPAddr, reg *registry.Store, evb
 }
 
 func handleEvent(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf events.Buffer) {
-
 	r := bytes.NewReader(data)
-
 	var msg BinaryEventPacket
 
-	binary.Read(r, binary.LittleEndian, &msg)
+	if err := binary.Read(r, binary.LittleEndian, &msg); err != nil {
+		log.Printf("[UDP] Ошибка парсинга event: %v", err)
+		return
+	}
 
 	deviceID := "unknown"
 	remoteAddr := fmt.Sprintf("%s:%d", addr.IP.String(), addr.Port)
@@ -84,41 +91,35 @@ func handleEvent(data []byte, addr *net.UDPAddr, reg *registry.Store, evbuf even
 		log.Printf("[UDP] Ошибка генерации картинки: %v", err)
 	} else {
 		base64Image = base64.StdEncoding.EncodeToString(imgBytes)
-		fileName := fmt.Sprintf("./event_%d.png", msg.TS)
-		if err := os.WriteFile(fileName, imgBytes, 0644); err != nil {
-			log.Printf("[UDP] Ошибка сохранения картинки %s: %v", fileName, err)
-		}
 	}
-	// ----только для лога
-	msgEv, _ := json.MarshalIndent(msg, "", "  ")
-	fmt.Println(string(msgEv))
-	// -------------------
 
-	// 4. Формирование Payload для системы (JSON с данными + картинка)
-	// Создаем структуру, объединяющую данные события и картинку
+	// Формирование Payload для системы (JSON с данными + картинка)
 	payloadMap := map[string]interface{}{
-		"data":  msg,         // Исходные данные пакета
-		"image": base64Image, // Картинка в base64 (пустая строка, если ошибка)
+		"data":  msg,
+		"image": base64Image,
 	}
 
 	jsonBytes, err := json.Marshal(payloadMap)
-
 	if err != nil {
 		log.Printf("[UDP] Ошибка формирования JSON: %v", err)
-	} else {
-		// Отправка в шину событий
-		ev := events.Event{
-			DeviceID: deviceID,
-			Topic:    "detector/event",
-			Payload:  jsonBytes,
-			Time:     time.Now(),
-		}
-		evbuf.Push(ev)
+		return
 	}
 
-	// 5. Запись логов на флешку (CSV) - без изменений
-	const logPath = "./detector_logs.csv"
+	// Отправка в шину событий
+	evbuf.Push(events.Event{
+		DeviceID: deviceID,
+		Topic:    "detector/event",
+		Payload:  jsonBytes,
+		Time:     time.Now(),
+	})
+
+	// Запись логов в CSV
+	logFileName := fmt.Sprintf("detector_logs_%s.csv", time.Now().Format("02.01.2006"))
+	logPath := filepath.Join(".", logFileName)
 	if err := writeToCSV(logPath, deviceID, addr.IP.String(), &msg); err != nil {
 		log.Printf("[CSV] Ошибка записи лога: %v", err)
+	} else {
+		log.Printf("[CSV] Запись лога в %s", logPath)
 	}
+
 }

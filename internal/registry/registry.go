@@ -25,12 +25,18 @@ type Device struct {
 }
 
 type Store struct {
-	mu   sync.RWMutex
-	data map[string]Device
+	mu        sync.RWMutex
+	data      map[string]Device
+	usedPorts map[int]bool
+	nextPort  int
 }
 
 func NewStore() *Store {
-	return &Store{data: map[string]Device{}}
+	return &Store{
+		data:      map[string]Device{},
+		usedPorts: map[int]bool{},
+		nextPort:  9005,
+	}
 }
 
 func (s *Store) Get(id string) (Device, bool) {
@@ -43,7 +49,30 @@ func (s *Store) Get(id string) (Device, bool) {
 func (s *Store) Upsert(m Device) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Если устройство уже есть, обновляем и сохраняем порт
+	if existing, ok := s.data[m.UID]; ok {
+		m.Port = existing.Port // Сохраняем старый порт
+		s.data[m.UID] = m
+		return
+	}
+
+	// Новое устройство - назначаем порт
+	if m.Port == "" {
+		m.Port = fmt.Sprintf("%d", s.allocatePort())
+	}
 	s.data[m.UID] = m
+}
+
+// allocatePort выделяет свободный порт в диапазоне 9005-9230
+func (s *Store) allocatePort() int {
+	for port := 9005; port <= 9230; port++ {
+		if !s.usedPorts[port] {
+			s.usedPorts[port] = true
+			return port
+		}
+	}
+	return 9005 // fallback
 }
 
 func (s *Store) Update(m Device) {

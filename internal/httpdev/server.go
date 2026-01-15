@@ -41,9 +41,9 @@ func StartAll(ctx context.Context, cfg *config.Config, reg *registry.Store) erro
 		}
 
 		go func(id string) {
-			log.Printf("httpdev: %s listening on :%d", id, m.Port)
+			log.Printf("httpdev: %v listening on :%v", id, m.Port)
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Printf("httpdev: server %s error: %v", id, err)
+				log.Printf("httpdev: server %v error: %v", id, err)
 			}
 		}(m.UID)
 
