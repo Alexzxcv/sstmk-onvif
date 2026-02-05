@@ -19,5 +19,14 @@ func Defaults() *Config {
 			Port:      8080,
 			StaticDir: "./webui/dist",
 		},
+
+		TTY: TTYConfig{
+			Enabled:  false,
+			Device:   "/dev/ttyACM0",
+			BaudRate: 250000,
+			DataBits: 8,
+			StopBits: 1,
+			Parity:   "none",
+		},
 	}
 }

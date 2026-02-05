@@ -8,16 +8,16 @@ import (
 )
 
 type Device struct {
-	UID          string `yaml:"uid"          json:"uid"`
-	SerialNumber string `yaml:"serialNumber" json:"serialNumber"`
+	UID          string `yaml:"id"           json:"uid"`
+	SerialNumber string `yaml:"serial"       json:"serialNumber"`
 	Name         string `yaml:"name"         json:"name"`
 	Vendor       string `yaml:"vendor"       json:"vendor"`
-	Object       string `yaml:"object"       json:"object"` // location
+	Object       string `yaml:"location"     json:"object"` // location
 	IP           string `yaml:"ip"           json:"ip"`
 	Port         string `yaml:"port"         json:"port"`
-	Version      string `yaml:"version"      json:"version"` // fw
+	Version      string `yaml:"firmware"     json:"version"` // fw
 	Model        string `yaml:"model"        json:"model"`
-	Revision     string `yaml:"revision"     json:"revision"` // hw
+	Revision     string `yaml:"hardware"     json:"revision"` // hw
 	Adapter      string `yaml:"adapter"      json:"adapter"`
 	AdapterDS    string `yaml:"adapterDS"    json:"adapter_ds"`
 	Enabled      bool   `yaml:"enabled"      json:"enabled"`

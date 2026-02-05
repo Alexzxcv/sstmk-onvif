@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8"/>
-    <title>Устройства</title>
+    <title>SSTMK-ONVIF Мониторинг</title>
     <style>
         * {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -15,550 +15,315 @@
             color: #f0f0f0;
         }
 
-        h1,
-        h2 {
-            margin-bottom: 10px;
+        h1, h2 {
+            margin-bottom: 15px;
         }
 
-        .devices-container {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(250px, 1fr));
-            gap: 16px;
-            margin-bottom: 30px;
-        }
-
-        .device-card {
-            border-radius: 10px;
-            padding: 12px 14px;
+        .main-table {
             background: #1f1f1f;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 30px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
         }
 
-        .device-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .device-fields {
+        .table-header {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            font-size: 14px;
+            grid-template-columns: 50px 1fr 150px 120px 120px 120px 80px 100px;
+            background: #2a2a2a;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
         }
 
-        @media screen and (max-width: 900px) {
-            .device-fields {
-                display: grid;
-                grid-template-columns: 1fr;
-            }
+        .table-row {
+            display: grid;
+            grid-template-columns: 50px 1fr 150px 120px 120px 120px 80px 100px;
+            border-bottom: 1px solid #333;
         }
 
-        label {
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .table-cell {
+            padding: 12px 8px;
             display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 12px;
-            color: #bbbbbb;
+            align-items: center;
+            border-right: 1px solid #333;
         }
 
-        input[type="text"] {
+        .table-cell:last-child {
+            border-right: none;
+        }
+
+        .table-cell input[type="text"] {
+            width: 100%;
             padding: 4px 6px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            outline: none;
+            border-radius: 4px;
+            border: 1px solid #444;
             background: #181818;
             color: #f0f0f0;
-            font-size: 13px;
+            font-size: 12px;
         }
 
-        input[type="text"]:focus {
+        .table-cell input[type="text"]:focus {
             border-color: #4a90e2;
+            outline: none;
         }
 
-        .toggle-wrap {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
         }
 
-        .device-wrapper {
-            display: flex;
-            width: 100%;
+        .status-online {
+            background: #4caf50;
         }
 
-        .device-header {
-            display: flex;
-            flex-direction: row;
-            width: 100%;
+        .status-offline {
+            background: #f44336;
         }
 
-        .header-item {
-            width: 100%;
-            border: solid 1px #bbbbbb;
-            padding: 5px;
-            background-color: #1f1f1f;
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
         }
 
-        .header-item:first-child {
-            width: 10%;
+        .toggle-switch.active {
+            background: #4caf50;
         }
 
-        .btn-wrapper {
-            display: flex;
-            justify-content: flex-end;
-            width: 100%;
-            margin-top: 20px;
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 22px;
         }
 
         .save-btn {
-            padding: 6px 14px;
-            border-radius: 6px;
-            line-height: 14px;
+            padding: 6px 12px;
+            border-radius: 4px;
             border: none;
+            background: #1e88e5;
+            color: white;
             cursor: pointer;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-            background-color: #1e88e5;
-            color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+            font-size: 12px;
+            transition: background 0.2s;
         }
 
         .save-btn:hover {
-            background-color: #1565c0;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
+            background: #1565c0;
         }
 
-        .save-btn:active {
-            background-color: #0d47a1;
-            transform: translateY(1px);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        .save-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #888;
+            padding: 20px;
         }
     </style>
 </head>
 
 <body>
-<h1>Устройства</h1>
-<div class="devices-container">
-    <!-- Устройство 1 -->
-    <div class="device-card" data-index="1">
-        <div class="device-header">
-            <span>Устройство 1</span>
-            <label class="toggle-wrap">
-                <input id="checkbox1" type="checkbox" class="device-enabled"/>
-                Включено
-            </label>
-        </div>
-        <div class="device-fields">
-            <label>
-                Название
-                <input type="text" class="device-name" placeholder="Например, Камера 1"/>
-            </label>
-            <label>
-                Серийный номер
-                <input type="text" class="device-serial" placeholder="SN123456"/>
-            </label>
-            <label>
-                Вендор
-                <input type="text" class="device-vendor" placeholder="Vendor"/>
-            </label>
-            <label>
-                Версия прошивки
-                <input type="text" class="device-firmware" placeholder="v1.0.0"/>
-            </label>
-        </div>
-        <div class="btn-wrapper">
-            <button class="save-btn">Сохранить</button>
-        </div>
+<h1>SSTMK-ONVIF Мониторинг устройств</h1>
+
+<div class="main-table">
+    <div class="table-header">
+        <div class="table-cell">#</div>
+        <div class="table-cell">Название</div>
+        <div class="table-cell">Серийный номер</div>
+        <div class="table-cell">Вендор</div>
+        <div class="table-cell">Версия ПО</div>
+        <div class="table-cell">Статус</div>
+        <div class="table-cell">Вкл/Выкл</div>
+        <div class="table-cell">Действия</div>
     </div>
-    <!-- Устройство 2 -->
-    <div class="device-card" data-index="2">
-        <div class="device-header">
-            <span>Устройство 2</span>
-            <label class="toggle-wrap">
-                <input id="checkbox2" type="checkbox" class="device-enabled"/>
-                Включено
-            </label>
-        </div>
-        <div class="device-fields">
-            <label>
-                Название
-                <input type="text" class="device-name" placeholder="Например, Камера 2"/>
-            </label>
-            <label>
-                Серийный номер
-                <input type="text" class="device-serial" placeholder="SN987654"/>
-            </label>
-            <label>
-                Вендор
-                <input type="text" class="device-vendor" placeholder="Vendor"/>
-            </label>
-            <label>
-                Версия прошивки
-                <input type="text" class="device-firmware" placeholder="v1.0.0"/>
-            </label>
-        </div>
-        <div class="btn-wrapper">
-            <button class="save-btn">Сохранить</button>
-        </div>
-    </div>
-    <!-- Устройство 3 -->
-    <div class="device-card" data-index="3">
-        <div class="device-header">
-            <span>Устройство 3</span>
-            <label class="toggle-wrap">
-                <input id="checkbox3" type="checkbox" class="device-enabled"/>
-                Включено
-            </label>
-        </div>
-        <div class="device-fields">
-            <label>
-                Название
-                <input type="text" class="device-name" placeholder="Устройство 3"/>
-            </label>
-            <label>
-                Серийный номер
-                <input type="text" class="device-serial" placeholder="SN..."/>
-            </label>
-            <label>
-                Вендор
-                <input type="text" class="device-vendor" placeholder="Vendor"/>
-            </label>
-            <label>
-                Версия прошивки
-                <input type="text" class="device-firmware" placeholder="v1.0.0"/>
-            </label>
-        </div>
-        <div class="btn-wrapper">
-            <button class="save-btn">Сохранить</button>
-        </div>
-    </div>
-    <!-- Устройство 4 -->
-    <div class="device-card" data-index="4">
-        <div class="device-header">
-            <span>Устройство 4</span>
-            <label class="toggle-wrap">
-                <input id="checkbox4" type="checkbox" class="device-enabled"/>
-                Включено
-            </label>
-        </div>
-        <div class="device-fields">
-            <label>
-                Название
-                <input type="text" class="device-name" placeholder="Устройство 4"/>
-            </label>
-            <label>
-                Серийный номер
-                <input type="text" class="device-serial" placeholder="SN..."/>
-            </label>
-            <label>
-                Вендор
-                <input type="text" class="device-vendor" placeholder="Vendor"/>
-            </label>
-            <label>
-                Версия прошивки
-                <input type="text" class="device-firmware" placeholder="v1.0.0"/>
-            </label>
-        </div>
-        <div class="btn-wrapper">
-            <button class="save-btn">Сохранить</button>
-        </div>
-    </div>
+    <div id="devicesTable"></div>
 </div>
-<h2>Активные устройства</h2>
-<div id="deviceWrapper" class="device-wrapper">
-    <div class="device-header">
-        <div class="header-item">#</div>
-        <div class="header-item">Название</div>
-        <div class="header-item">Серийный номер</div>
-        <div class="header-item">Вендор</div>
-        <div class="header-item">Версия прошивки</div>
-        <div class="header-item">Количество аварий</div>
-    </div>
+
+<div class="no-data" id="noDevicesHint" style="display: none;">
+    Устройства не найдены
 </div>
-<div class="muted" id="noActiveHint">
-    Нет активных устройств.
-</div>
-<div id="alarms"></div>
-<div id="activeDevicesRows"></div>
+
 <script>
+    const HOST = 'localhost';
+    const devicesTable = document.getElementById('devicesTable');
+    const noDevicesHint = document.getElementById('noDevicesHint');
+
     async function getDevices() {
-        const requestOptions = {
-            method: "GET",
-            redirect: "follow"
-        };
-
         try {
-            const response = await fetch(`http://${HOST}:8080/api/v1/devices`, requestOptions);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            const response = await fetch(`http://${HOST}:8080/api/v1/devices`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
             const json = await response.json();
-            console.log("raw devices response:", json);
-
-            // Если бэкенд возвращает { data: [...] }
-            const devices = Array.isArray(json.data) ? json.data : json;
-            console.log("devices array:", devices);
-
-            return devices;
+            return Array.isArray(json.data) ? json.data : json;
         } catch (error) {
-            console.error("Ошибка при запросе устройств:", error);
-            throw error;
+            console.error('Ошибка при запросе устройств:', error);
+            return [];
         }
     }
+
+    async function saveDevice(id, data) {
+        try {
+            const response = await fetch(`http://${HOST}:8080/api/v1/device/${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`PATCH error ${response.status}: ${text}`);
+            }
+
+            console.log(`Устройство ${id} обновлено:`, data);
+            await renderDevices();
+        } catch (error) {
+            console.error('Ошибка при сохранении устройства:', error);
+            alert('Ошибка при сохранении: ' + error.message);
+        }
+    }
+
+    async function toggleDevice(id, enabled) {
+        await saveDevice(id, { enabled });
+    }
+
+    function createDeviceRow(device, index) {
+        const row = document.createElement('div');
+        row.className = 'table-row';
+        row.dataset.deviceId = device.uid;
+
+        const isBuiltIn = device.uid.startsWith('gate-');
+        const statusClass = device.enabled && device.online ? 'status-online' : 'status-offline';
+        const toggleClass = device.enabled ? 'active' : '';
+
+        // Для встроенных устройств - обычная логика
+        // Для обнаруженных - enabled контролирует отображение, online контролирует статус
+        const statusText = isBuiltIn 
+            ? (device.enabled && device.online ? 'Активно' : 'Неактивно')
+            : (device.online ? 'Активно' : 'Неактивно');
+
+        // Переключатель только для встроенных устройств
+        const toggleHtml = isBuiltIn 
+            ? `<div class="toggle-switch ${toggleClass}" data-device-id="${device.uid}"></div>`
+            : `<span style="color: #888;">—</span>`;
+
+        row.innerHTML = `
+            <div class="table-cell">${index + 1}</div>
+            <div class="table-cell">
+                <input type="text" class="device-name" value="${device.name || ''}" placeholder="Название устройства">
+            </div>
+            <div class="table-cell">
+                <input type="text" class="device-serial" value="${device.serialNumber || ''}" placeholder="Серийный номер">
+            </div>
+            <div class="table-cell">
+                <input type="text" class="device-vendor" value="${device.vendor || ''}" placeholder="Производитель">
+            </div>
+            <div class="table-cell">
+                <input type="text" class="device-version" value="${device.version || ''}" placeholder="Версия ПО">
+            </div>
+            <div class="table-cell">
+                <div class="status-indicator ${statusClass}"></div>
+                ${statusText}
+            </div>
+            <div class="table-cell">
+                ${toggleHtml}
+            </div>
+            <div class="table-cell">
+                <button class="save-btn" data-device-id="${device.uid}">Сохранить</button>
+            </div>
+        `;
+
+        return row;
+    }
+
+    async function renderDevices() {
+        const devices = await getDevices();
+        console.log('renderDevices: получено устройств:', devices.length);
+        devices.forEach(d => console.log(`Device ${d.uid}: enabled=${d.enabled}, online=${d.online}`));
+        
+        if (devices.length === 0) {
+            devicesTable.innerHTML = '';
+            noDevicesHint.style.display = 'block';
+            return;
+        }
+
+        noDevicesHint.style.display = 'none';
+        devicesTable.innerHTML = '';
+
+        // Сортируем: сначала встроенные (gate-001,002,003,004), потом остальные
+        const builtInDevices = devices.filter(d => d.uid.startsWith('gate-')).sort((a, b) => a.uid.localeCompare(b.uid));
+        const discoveredDevices = devices.filter(d => !d.uid.startsWith('gate-') && d.enabled).sort((a, b) => a.uid.localeCompare(b.uid));
+        
+        const sortedDevices = [...builtInDevices, ...discoveredDevices];
+        
+        sortedDevices.forEach((device, index) => {
+            const row = createDeviceRow(device, index);
+            devicesTable.appendChild(row);
+        });
+
+        initEventHandlers();
+    }
+
+    function initEventHandlers() {
+        // Переключатели только для встроенных устройств
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                const deviceId = e.target.dataset.deviceId;
+                // Проверяем, что это встроенное устройство
+                if (!deviceId.startsWith('gate-')) return;
+                
+                const isActive = e.target.classList.contains('active');
+                console.log(`Переключаем устройство ${deviceId}: ${isActive} -> ${!isActive}`);
+                toggleDevice(deviceId, !isActive);
+            });
+        });
+
+        document.querySelectorAll('.save-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const deviceId = e.target.dataset.deviceId;
+                const row = e.target.closest('.table-row');
+                
+                const data = {
+                    name: row.querySelector('.device-name').value,
+                    serialNumber: row.querySelector('.device-serial').value,
+                    vendor: row.querySelector('.device-vendor').value,
+                    version: row.querySelector('.device-version').value
+                };
+
+                e.target.disabled = true;
+                e.target.textContent = 'Сохранение...';
+                
+                await saveDevice(deviceId, data);
+                
+                e.target.disabled = false;
+                e.target.textContent = 'Сохранить';
+            });
+        });
+    }
+
+    renderDevices();
 </script>
+
 </body>
-
 </html>
-<!--    <script>-->
-<!--        const deviceWrapper = document.getElementById('deviceWrapper');-->
-<!--        const activeDevicesRows = document.getElementById('activeDevicesRows');-->
-<!--        const noActiveHint = document.getElementById('noActiveHint');-->
-
-
-<!--        // async function toggleDevice(id, enabled) {-->
-<!--        //     await fetch(`http://localhost:8080/api/v1/device/${id}`, {-->
-<!--        //         method: 'PATCH',-->
-<!--        //         headers: {-->
-<!--        //             'Content-Type': 'application/json',-->
-<!--        //         },-->
-<!--        //         body: JSON.stringify({ enabled }),-->
-<!--        //     })-->
-<!--        //         .then((response) => response.text())-->
-<!--        //         .then((result) => console.log(JSON.parse(result)))-->
-<!--        //         .catch((error) => console.error(error));-->
-<!--        //     getDevices();-->
-<!--        // }-->
-<!--        /**-->
-<!--         * Получаем список устройств с бэкенда.-->
-<!--         * Ожидаемый формат: { data: [ {...}, {...} ] }-->
-<!--         */-->
-<!--        const HOST = 'localhost'-->
-<!--        async function getDevices() {-->
-<!--            const requestOptions = {-->
-<!--                method: "GET",-->
-<!--                redirect: "follow"-->
-<!--            };-->
-
-<!--            try {-->
-<!--                const response = await fetch(`http://${HOST}:8080/api/v1/devices`, requestOptions);-->
-
-<!--                if (!response.ok) {-->
-<!--                    throw new Error(`HTTP error! status: ${response.status}`);-->
-<!--                }-->
-
-<!--                const json = await response.json();-->
-<!--                console.log("raw devices response:", json);-->
-
-<!--                // Если бэкенд возвращает { data: [...] }-->
-<!--                const devices = Array.isArray(json.data) ? json.data : json;-->
-<!--                console.log("devices array:", devices);-->
-
-<!--                return devices;-->
-<!--            } catch (error) {-->
-<!--                console.error("Ошибка при запросе устройств:", error);-->
-<!--                throw error;-->
-<!--            }-->
-<!--        }-->
-
-<!--        /**-->
-<!--         * PATCH на изменение enabled у устройства-->
-<!--         */-->
-<!--        async function toggleDevice(id, enabled) {-->
-<!--            try {-->
-<!--                const resp = await fetch(`http://${HOST}:8080/api/v1/device/${encodeURIComponent(id)}`, {-->
-<!--                    method: 'PATCH',-->
-<!--                    headers: {-->
-<!--                        'Content-Type': 'application/json',-->
-<!--                    },-->
-<!--                    body: JSON.stringify({ enabled }),-->
-<!--                });-->
-
-<!--                if (!resp.ok) {-->
-<!--                    const text = await resp.text();-->
-<!--                    throw new Error(`PATCH error ${resp.status}: ${text}`);-->
-<!--                }-->
-
-<!--                console.log(`Статус устройства ${id} изменён на`, enabled);-->
-
-<!--                // После изменения — перезагружаем список, чтобы нижняя табличка обновилась-->
-<!--                const devices = await getDevices();-->
-<!--                renderTopCards(devices);-->
-<!--                renderActiveDevices(devices);-->
-<!--            } catch (err) {-->
-<!--                console.error('Ошибка при изменении статуса устройства:', err);-->
-<!--            }-->
-<!--        }-->
-
-<!--        /**-->
-<!--         * Заполняем 4 верхние карточки данными устройств-->
-<!--         */-->
-<!--        function renderTopCards(devices) {-->
-<!--            // Отсортируем по id, чтобы шло gate-001, gate-002, ...-->
-<!--            const sorted = devices.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));-->
-
-<!--            const cards = document.querySelectorAll('.device-card');-->
-
-<!--            cards.forEach((card, index) => {-->
-<!--                const dev = sorted[index];-->
-<!--                if (!dev) {-->
-<!--                    // Если устройств меньше 4 — карточку можно скрыть или очистить-->
-<!--                    card.style.display = 'none';-->
-<!--                    return;-->
-<!--                }-->
-<!--                card.style.display = ''; // на всякий случай-->
-
-<!--                // Заголовок-->
-<!--                const titleSpan = card.querySelector('.device-header span');-->
-<!--                if (titleSpan) {-->
-<!--                    titleSpan.textContent = dev.name || `Устройство ${index + 1}`;-->
-<!--                }-->
-
-<!--                // Поля ввода-->
-<!--                const nameInput = card.querySelector('.device-name');-->
-<!--                const serialInput = card.querySelector('.device-serial');-->
-<!--                const vendorInput = card.querySelector('.device-vendor');-->
-<!--                const firmwareInput = card.querySelector('.device-firmware');-->
-<!--                const checkbox = card.querySelector('.device-enabled');-->
-
-<!--                if (nameInput) nameInput.value = dev.name || '';-->
-<!--                if (serialInput) serialInput.value = dev.serial || '';-->
-<!--                if (vendorInput) vendorInput.value = dev.vendor || '';-->
-<!--                if (firmwareInput) firmwareInput.value = dev.firmware || '';-->
-<!--                if (checkbox) {-->
-<!--                    checkbox.checked = !!dev.enabled;-->
-
-<!--                    // Чтобы не навешивать несколько обработчиков — снимаем старый, если был-->
-<!--                    const newCheckbox = checkbox.cloneNode(true);-->
-<!--                    checkbox.parentNode.replaceChild(newCheckbox, checkbox);-->
-
-<!--                    newCheckbox.checked = !!dev.enabled;-->
-<!--                    newCheckbox.addEventListener('change', (e) => {-->
-<!--                        const newEnabled = e.target.checked;-->
-<!--                        toggleDevice(dev.id, newEnabled);-->
-<!--                    });-->
-<!--                }-->
-
-<!--                // Можно сохранить id устройства в data-атрибут карточки-->
-<!--                card.dataset.deviceId = dev.id;-->
-<!--            });-->
-<!--        }-->
-
-<!--        /**-->
-<!--         * Рисуем внизу таблицу "активных" устройств-->
-<!--         */-->
-<!--        function renderActiveDevices(devices) {-->
-<!--            if (!activeDevicesRows) return;-->
-
-<!--            // Очищаем строки-->
-<!--            activeDevicesRows.innerHTML = '';-->
-
-<!--            // Считаем активным: включен и online-->
-<!--            const active = devices.filter(d => d.enabled && d.online);-->
-
-<!--            if (active.length === 0) {-->
-<!--                if (noActiveHint) {-->
-<!--                    noActiveHint.style.display = 'block';-->
-<!--                }-->
-<!--                return;-->
-<!--            } else {-->
-<!--                if (noActiveHint) {-->
-<!--                    noActiveHint.style.display = 'none';-->
-<!--                }-->
-<!--            }-->
-
-<!--            active.forEach((dev, idx) => {-->
-<!--                const row = document.createElement('div');-->
-<!--                row.className = 'device-header'; // чтобы сетка из .header-item работала как строка-->
-
-<!--                row.innerHTML = `-->
-<!--                <div class="header-item">${idx + 1}</div>-->
-<!--                <div class="header-item">${dev.name || ''}</div>-->
-<!--                <div class="header-item">${dev.serial || ''}</div>-->
-<!--                <div class="header-item">${dev.vendor || ''}</div>-->
-<!--                <div class="header-item">${dev.firmware || ''}</div>-->
-<!--                <div class="header-item">${dev.error_count ?? 0}</div>-->
-<!--            `;-->
-
-<!--                activeDevicesRows.appendChild(row);-->
-<!--            });-->
-<!--        }-->
-
-<!--        /**-->
-<!--         * Инициализация: загрузить устройства и отрисовать всё-->
-<!--         */-->
-<!--        const initDevices = async () => {-->
-<!--            try {-->
-<!--                const devices = await getDevices();-->
-<!--                renderTopCards(devices);-->
-<!--                renderActiveDevices(devices);-->
-<!--            } catch (e) {-->
-<!--                console.error('Ошибка инициализации устройств:', e);-->
-<!--            }-->
-<!--        };-->
-
-<!--        function initAlarmsStream() {-->
-<!--            const container = document.getElementById('alarms');-->
-<!--            if (!container) return;-->
-
-<!--            const es = new EventSource('/api/v1/events/stream');-->
-
-<!--            es.onmessage = (event) => {-->
-<!--                try {-->
-<!--                    const data = JSON.parse(event.data);-->
-<!--                    // ожидаем формат:-->
-<!--                    // {-->
-<!--                    //   device_id: "tty-input-3",-->
-<!--                    //   topic: "input",-->
-<!--                    //   time: "2025-12-12T...",-->
-<!--                    //   payload: { input: 3, state: 1 }-->
-<!--                    // }-->
-<!--                    console.log(data);-->
-
-<!--                    if (data.topic !== 'input') {-->
-<!--                        return;-->
-<!--                    }-->
-
-<!--                    const p = data.payload || {};-->
-<!--                    const input = p.input;-->
-<!--                    const state = p.state;-->
-
-<!--                    const timeStr = new Date(data.time).toLocaleTimeString();-->
-
-<!--                    const div = document.createElement('div');-->
-<!--                    div.className = 'alarm';-->
-<!--                    div.innerHTML = `-->
-<!--                <span class="alarm-time">${timeStr}</span>-->
-<!--                <span class="alarm-device">${data.device_id}</span>-->
-<!--                <span>Вход ${input}: ${state ? 'АВАРИЯ' : 'Норма'}</span>-->
-<!--            `;-->
-
-<!--                    // добавляем сверху (последняя авария — первая)-->
-<!--                    container.prepend(div);-->
-
-<!--                    // опционально: ограничим количество отображаемых аварий-->
-<!--                    const maxItems = 50;-->
-<!--                    while (container.children.length > maxItems) {-->
-<!--                        container.removeChild(container.lastChild);-->
-<!--                    }-->
-<!--                } catch (e) {-->
-<!--                    console.error('Ошибка разбора SSE-события:', e, event.data);-->
-<!--                }-->
-<!--            };-->
-
-<!--            es.onerror = (err) => {-->
-<!--                console.error('SSE error', err);-->
-<!--                // браузер сам попытается переподключиться-->
-<!--            };-->
-<!--        }-->
-
-<!--        // В конце init:-->
-<!--        initDevices();-->
-<!--        initAlarmsStream();-->
-<!--    </script>-->

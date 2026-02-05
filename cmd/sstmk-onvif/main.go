@@ -7,16 +7,28 @@ import (
 	"syscall"
 
 	"sstmk-onvif/internal/adapters/udp"
+	"sstmk-onvif/internal/tty"
 
 	"sstmk-onvif/internal/bootstrap"
 	"sstmk-onvif/internal/config"
 	"sstmk-onvif/internal/events"
 	"sstmk-onvif/internal/hub"
 	"sstmk-onvif/internal/registry"
+	"sstmk-onvif/internal/sstmk"
 	"sstmk-onvif/internal/state"
-	"sstmk-onvif/internal/tty"
 	"sstmk-onvif/internal/web"
 )
+
+// isBuiltInDevice проверяет, является ли устройство вшитым
+func isBuiltInDevice(uid string) bool {
+	builtInDevices := []string{"gate-001", "gate-002", "gate-003", "gate-004"}
+	for _, builtInUID := range builtInDevices {
+		if uid == builtInUID {
+			return true
+		}
+	}
+	return false
+}
 
 func main() {
 
@@ -53,10 +65,12 @@ func main() {
 		})
 		// Восстанавливаем enabled из state.json
 		reg.SetEnabled(d.UID, d.Enabled)
-
-		// Онлайн можно либо брать из state, либо форсить true/false.
-		// Сейчас, как у тебя раньше, просто делаем true.
-		reg.SetOnline(d.UID, true)
+		// Для вшитых устройств всегда online=true
+		if isBuiltInDevice(d.UID) {
+			reg.SetOnline(d.UID, true)
+		} else {
+			reg.SetOnline(d.UID, d.Online)
+		}
 	}
 
 	evbuf := events.NewRing(1024)
@@ -70,7 +84,8 @@ func main() {
 	errCh := make(chan error, 2)
 
 	// 3. Стартуем веб-сервер, передаём statePath
-	webSrv := web.New(cfg.Web, reg, evbuf, hb, statePath)
+	sstmkAdapter := sstmk.NewAdapter(cfg.SSTMK.BaseURL)
+	webSrv := web.New(cfg.Web, reg, evbuf, hb, statePath, sstmkAdapter.GetEventService())
 	go func() {
 		if err := webSrv.Start(ctx); err != nil {
 			errCh <- err
@@ -91,8 +106,16 @@ func main() {
 	}()
 
 	go func() {
+		if !cfg.TTY.Enabled {
+			log.Printf("[tty] disabled")
+			return
+		}
 		ttyCfg := tty.Config{
-			Device: "/tmp/ttyV0",
+			Device:   cfg.TTY.Device,
+			BaudRate: cfg.TTY.BaudRate,
+			DataBits: cfg.TTY.DataBits,
+			StopBits: cfg.TTY.StopBits,
+			Parity:   cfg.TTY.Parity,
 		}
 		if err := tty.Start(ctx, ttyCfg, evbuf); err != nil {
 			// не падаем весь сервис, просто логируем
@@ -100,7 +123,17 @@ func main() {
 		}
 	}()
 
-	// 5. Ждём либо ошибку, либо сигнал завершения
+	// 5. SSTMK адаптер
+	go func() {
+		if !cfg.SSTMK.Enabled {
+			log.Printf("[SSTMK] disabled")
+			return
+		}
+		sstmkAdapter.Start(ctx, evbuf)
+		log.Printf("[SSTMK] adapter started, base_url=%s", cfg.SSTMK.BaseURL)
+	}()
+
+	// 6. Ждём либо ошибку, либо сигнал завершения
 	select {
 	case err := <-errCh:
 		log.Fatalf("fatal: %v", err)

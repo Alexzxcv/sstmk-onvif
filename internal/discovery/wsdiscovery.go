@@ -21,37 +21,57 @@ func Start(ctx context.Context, cfg *config.Config, reg *registry.Store) error {
 }
 
 func runWSDiscovery(ctx context.Context, cfg *config.Config, reg *registry.Store) {
+	log.Printf("ws-discovery: starting on UDP :3702")
 	pc, err := net.ListenPacket("udp4", "0.0.0.0:3702")
 	if err != nil {
 		log.Printf("ws-discovery: listen error: %v", err)
 		return
 	}
 	defer pc.Close()
-	log.Printf("ws-discovery: listening on UDP :3702")
+	log.Printf("ws-discovery: successfully listening on UDP :3702")
 
 	p := ipv4.NewPacketConn(pc)
 	_ = p.SetControlMessage(ipv4.FlagDst, true)
 	_ = p.SetMulticastLoopback(true)
 
-	if ifi, err := net.InterfaceByName(cfg.LANIfName); err != nil {
-		log.Printf("ws-discovery: cannot find iface %s: %v", cfg.LANIfName, err)
-	} else {
-		mcast := net.IPv4(239, 255, 255, 250)
-		if err := p.JoinGroup(ifi, &net.UDPAddr{IP: mcast}); err != nil {
-			log.Printf("ws-discovery: JoinGroup on %s failed: %v", cfg.LANIfName, err)
+	if cfg.LANIfName != "" {
+		if ifi, err := net.InterfaceByName(cfg.LANIfName); err != nil {
+			log.Printf("ws-discovery: cannot find iface %s: %v", cfg.LANIfName, err)
 		} else {
-			log.Printf("ws-discovery: joined %s on %s", mcast.String(), cfg.LANIfName)
+			mcast := net.IPv4(239, 255, 255, 250)
+			if err := p.JoinGroup(ifi, &net.UDPAddr{IP: mcast}); err != nil {
+				log.Printf("ws-discovery: JoinGroup on %s failed: %v", cfg.LANIfName, err)
+			} else {
+				log.Printf("ws-discovery: joined %s on %s", mcast.String(), cfg.LANIfName)
+			}
+			_ = p.SetMulticastInterface(ifi)
+			_ = p.SetMulticastTTL(1)
 		}
-		_ = p.SetMulticastInterface(ifi)
+	} else {
+		log.Printf("ws-discovery: no interface specified, trying to join multicast on all interfaces")
+		mcast := net.IPv4(239, 255, 255, 250)
+		ifaces, _ := net.Interfaces()
+		for _, ifc := range ifaces {
+			if (ifc.Flags&net.FlagUp) == 0 || (ifc.Flags&net.FlagMulticast) == 0 {
+				continue
+			}
+			if err := p.JoinGroup(&ifc, &net.UDPAddr{IP: mcast}); err != nil {
+				log.Printf("ws-discovery: JoinGroup on %s failed: %v", ifc.Name, err)
+			} else {
+				log.Printf("ws-discovery: joined %s on %s", mcast.String(), ifc.Name)
+			}
+		}
 		_ = p.SetMulticastTTL(1)
 	}
 
 	buf := make([]byte, 8192)
 	const maxUDP = 1300
 
+	log.Printf("ws-discovery: entering main loop, waiting for packets...")
 	for {
 		// cancellation?
 		if err := ctx.Err(); err != nil {
+			log.Printf("ws-discovery: context cancelled, stopping")
 			return
 		}
 
@@ -92,38 +112,53 @@ func runWSDiscovery(ctx context.Context, cfg *config.Config, reg *registry.Store
 		var chunkBody strings.Builder
 		sendChunk := func() {
 			if chunkBody.Len() == 0 {
-				log.Printf("Расходимся")
+				log.Printf("Нет устройств для отправки")
 				return
 			}
 			resp := envelope(relates, chunkBody.String())
-			_, _ = p.WriteTo([]byte(resp), nil, raddr)
+			log.Printf("Отправляем ответ с %d устройствами на %s", strings.Count(chunkBody.String(), "ProbeMatch"), raddr)
+			n, err := p.WriteTo([]byte(resp), nil, raddr)
+			if err != nil {
+				log.Printf("Ошибка отправки: %v", err)
+			} else {
+				log.Printf("Отправлено %d байт", n)
+			}
 			chunkBody.Reset()
 			time.Sleep(10 * time.Millisecond)
 		}
 		log.Println("List=", reg.List())
+		// Выводим registry в JSON формате для отладки
+		reg.RegisterOrUpdate()
+		log.Printf("Начинаем обработку %d устройств", len(reg.List()))
 		for _, m := range reg.List() {
+			log.Printf("Проверяем устройство %s: enabled=%t, online=%t, name=%s", m.UID, m.Enabled, m.Online, m.Name)
 			// ⬇️ НЕ показываем устройство, если оно выключено или оффлайн
 			if !m.Enabled || !m.Online {
+				log.Printf("Пропускаем устройство %s (не активно)", m.UID)
 				continue
 			}
 
-			x := fmt.Sprintf("http://%s:%d%s", localIP, m.Port, cfg.DevicePath)
+			x := fmt.Sprintf("http://%s:%s%s", localIP, m.Port, cfg.DevicePath)
+			log.Printf("Добавляем устройство %s с XAddr: %s", m.UID, x)
 			scopes := fmt.Sprintf(
 				"onvif://www.onvif.org/name/%s onvif://www.onvif.org/type/%s",
 				m.Name, m.Model,
 			)
+			log.Printf("Scopes для %s: %s", m.UID, scopes)
 
 			one := matchXML(probeMatch{
 				Endpoint: uuidURN(), // можно сделать стабильным, если захочешь (см. ниже)
 				XAddr:    x,
 				Scopes:   scopes,
 			})
+			log.Printf("XML для %s: %s", m.UID, one)
 
 			if chunkBody.Len() > 0 && (chunkBody.Len()+len(one) > maxUDP) {
 				sendChunk()
 			}
 			chunkBody.WriteString(one)
 		}
+		log.Printf("%v", reg.List())
 		sendChunk()
 	}
 }

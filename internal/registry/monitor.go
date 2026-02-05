@@ -27,6 +27,11 @@ func (s *Store) checkDevices() {
 	devices := s.List()
 
 	for _, dev := range devices {
+		// Пропускаем вшитые устройства - они всегда online
+		if s.isBuiltInDevice(dev.UID) {
+			continue
+		}
+
 		online := s.pingDevice(dev.IP)
 
 		// Обновляем статус только если изменился
@@ -39,6 +44,17 @@ func (s *Store) checkDevices() {
 			}
 		}
 	}
+}
+
+// isBuiltInDevice проверяет, является ли устройство вшитым
+func (s *Store) isBuiltInDevice(uid string) bool {
+	builtInDevices := []string{"gate-001", "gate-002", "gate-003", "gate-004"}
+	for _, builtInUID := range builtInDevices {
+		if uid == builtInUID {
+			return true
+		}
+	}
+	return false
 }
 
 // pingDevice проверяет доступность устройства по IP

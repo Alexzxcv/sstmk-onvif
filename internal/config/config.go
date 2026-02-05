@@ -29,6 +29,20 @@ type UsbConfig struct {
 	Baud    int    `yaml:"baud"`
 }
 
+type TTYConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Device   string `yaml:"device"`   // "/dev/ttyUSB0", "COM1"
+	BaudRate int    `yaml:"baudrate"` // 9600, 115200
+	DataBits int    `yaml:"databits"` // 7, 8
+	StopBits int    `yaml:"stopbits"` // 1, 2
+	Parity   string `yaml:"parity"`   // "none", "odd", "even"
+}
+
+type SSTMKConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	BaseURL string `yaml:"base_url"`
+}
+
 type Config struct {
 	PublicIP     string        `yaml:"public_ip"`
 	LANIfName    string        `yaml:"lan_if"`
@@ -38,6 +52,8 @@ type Config struct {
 	ReadTimeout  time.Duration `yaml:"read_timeout"`
 	WriteTimeout time.Duration `yaml:"write_timeout"`
 	Web          WebConfig     `yaml:"web"`
+	TTY          TTYConfig     `yaml:"tty"`
+	SSTMK        SSTMKConfig   `yaml:"sstmk"`
 }
 
 func Load() (*Config, error) {
@@ -47,7 +63,7 @@ func Load() (*Config, error) {
 	// if runtime.GOOS == "linux" {
 	// defaultConfigPath = "./webui/config/sstmk-onvif.yml"
 	// } else {
-	defaultConfigPath = "./webui/config/sstmk-onvif.yml"
+	defaultConfigPath = "./configs/sstmk-onvif.yml"
 	// }
 
 	// if runtime.GOOS == "linux" {
@@ -73,5 +89,8 @@ func Load() (*Config, error) {
 	}
 
 	log.Printf("config loaded, devices=%d", len(cfg.Devices))
+	for i, dev := range cfg.Devices {
+		log.Printf("Config Device %d: UID=%s, Name=%s, Vendor=%s, Serial=%s, Firmware=%s", i, dev.UID, dev.Name, dev.Vendor, dev.SerialNumber, dev.Version)
+	}
 	return cfg, nil
 }

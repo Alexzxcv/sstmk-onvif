@@ -1,7 +1,8 @@
 # public_ip: 192.168.1.254
-public_ip: 127.0.0.1
+# public_ip: 127.0.0.1
+lan_if: ""
 # lan_if: br-lan
-lan_if: "Беспроводная сеть"
+# lan_if: "Беспроводная сеть"
 device_path: /onvif/device_service
 events_path: /onvif/events
 
@@ -10,6 +11,18 @@ web:
   port: 8080
   static_dir: ./webui/dist
   config_path: ./webui/config
+
+tty:
+  enabled: false
+  device: /dev/ttyUSB0  # или COM1 для Windows
+  baudrate: 9600
+  databits: 8
+  stopbits: 1
+  parity: none
+
+sstmk:
+  enabled: true
+  base_url: "http://localhost:8080"
 
 devices:
   - id: gate-001
@@ -23,9 +36,10 @@ devices:
     type_scope: MetalDetector
     port: 9001
     adapter: tcp
-    adapterDS: 192.168.16.10:9001
+    adapterDS: 192.168.31.10:9001
     enabled: true
-    
+    online: true
+
   - id: gate-002
     name: Frame-Detector-002
     vendor: SSTMK
@@ -37,8 +51,9 @@ devices:
     type_scope: MetalDetector
     port: 9002
     adapter: tcp
-    adapterDS: 192.168.16.10:9002
+    adapterDS: 192.168.31.10:9002
     enabled: true
+    online: true
 
   - id: gate-003
     name: Frame-Detector-003
@@ -51,8 +66,9 @@ devices:
     type_scope: MetalDetector
     port: 9003
     adapter: tcp
-    adapterDS: 192.168.16.10:9003
+    adapterDS: 192.168.31.10:9003
     enabled: true
+    online: true
 
   - id: gate-004
     name: Frame-Detector-004
@@ -65,5 +81,6 @@ devices:
     type_scope: MetalDetector
     port: 9004
     adapter: tcp
-    adapterDS: 192.168.16.10:9004
+    adapterDS: 192.168.31.10:9004
     enabled: true
+    online: true

@@ -19,25 +19,27 @@ import (
 )
 
 type Server struct {
-	http      *http.Server
-	cfg       config.WebConfig
-	reg       *registry.Store
-	evbuf     events.Buffer // 👈 теперь интерфейс из твоего пакета
-	hub       *hub.Hub
-	statePath string // хранение данных
+	http         *http.Server
+	cfg          config.WebConfig
+	reg          *registry.Store
+	evbuf        events.Buffer // 👈 теперь интерфейс из твоего пакета
+	hub          *hub.Hub
+	statePath    string       // хранение данных
+	eventService http.Handler // ONVIF Event Service
 }
 
-func New(cfg config.WebConfig, reg *registry.Store, evbuf events.Buffer, hub *hub.Hub, statePath string) *Server {
+func New(cfg config.WebConfig, reg *registry.Store, evbuf events.Buffer, hub *hub.Hub, statePath string, eventService http.Handler) *Server {
 	mux := http.NewServeMux()
 
 	// --- SSE событий из ring buffer ---
 	// Пуллим события чаще (например, раз в 500мс) и шлём клиенту
 	s := &Server{
-		cfg:       cfg,
-		reg:       reg,
-		evbuf:     evbuf,
-		hub:       hub,
-		statePath: statePath,
+		cfg:          cfg,
+		reg:          reg,
+		evbuf:        evbuf,
+		hub:          hub,
+		statePath:    statePath,
+		eventService: eventService,
 	}
 
 	mux.HandleFunc("/api/v1/health", s.handleHealth)
@@ -45,6 +47,10 @@ func New(cfg config.WebConfig, reg *registry.Store, evbuf events.Buffer, hub *hu
 	mux.HandleFunc("/api/v1/devices/", s.handleDeviceAPI)
 	mux.HandleFunc("/api/v1/device/", s.handleDevicePutch)
 	mux.HandleFunc("/api/v1/events/stream", s.handleEventsStream)
+
+	// ONVIF Event Service
+	mux.Handle("/onvif/events", s.eventService)
+	mux.Handle("/onvif/events/", http.StripPrefix("/onvif/events", s.eventService))
 
 	// --- STATIC ---
 	staticDir := filepath.Clean(cfg.StaticDir)

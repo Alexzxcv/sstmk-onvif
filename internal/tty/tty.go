@@ -17,25 +17,29 @@ import (
 // Пока минимальный конфиг — просто путь до устройства.
 // Потом можно вынести в общий config.Config.
 type Config struct {
-	Device string
+	Device   string
+	BaudRate int    // Скорость передачи (9600, 115200, etc.)
+	DataBits int    // Биты данных (7, 8)
+	StopBits int    // Стоп-биты (1, 2)
+	Parity   string // Четность ("none", "odd", "even")
 }
 
 // Start блокирующе читает строки из tty и пушит их в evbuf.
 // Формат строки: EVT,<input_id>,<state>\n
 func Start(ctx context.Context, cfg Config, evbuf events.Buffer) error {
 	if cfg.Device == "" {
-		log.Printf("tty: disabled (no device)")
+		log.Printf("[tty] disabled (no device)")
 		<-ctx.Done()
 		return ctx.Err()
 	}
 
 	f, err := os.Open(cfg.Device)
 	if err != nil {
-		return fmt.Errorf("tty: cannot open %s: %w", cfg.Device, err)
+		return fmt.Errorf("[tty] cannot open %s: %w", cfg.Device, err)
 	}
 	defer f.Close()
 
-	log.Printf("[tty]: listening on %s", cfg.Device)
+	log.Printf("[tty] listening on %s", cfg.Device)
 
 	// Чтобы ctx отменял блокирующее чтение — закрываем fd,
 	// когда контекст завершится.
@@ -69,14 +73,14 @@ func Start(ctx context.Context, cfg Config, evbuf events.Buffer) error {
 		// Ожидаем: EVT,<id>,<state>
 		parts := strings.Split(line, ",")
 		if len(parts) != 3 || parts[0] != "EVT" {
-			log.Printf("tty: ignore line %q", line)
+			log.Printf("[tty] ignore line %q", line)
 			continue
 		}
 		log.Printf("Data: %s", parts)
 		inputID, err1 := strconv.Atoi(parts[1])
 		state, err2 := strconv.Atoi(parts[2])
 		if err1 != nil || err2 != nil {
-			log.Printf("tty: bad ints in %q", line)
+			log.Printf("[tty] bad ints in %q", line)
 			continue
 		}
 

@@ -35,7 +35,7 @@ func StartAll(ctx context.Context, cfg *config.Config, reg *registry.Store) erro
 		})
 
 		srv := &http.Server{
-			Addr:              fmt.Sprintf(":%d", m.Port),
+			Addr:              ":" + m.Port,
 			Handler:           logMiddleware(mux),
 			ReadHeaderTimeout: 5 * time.Second,
 		}
@@ -99,7 +99,7 @@ func deviceServiceHandlerFor(w http.ResponseWriter, r *http.Request, m registry.
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	base := fmt.Sprintf("http://%s:%d", host, m.Port)
+	base := fmt.Sprintf("http://%s:%s", host, m.Port)
 	devX := base + devicePath
 	evX := base + eventsPath
 

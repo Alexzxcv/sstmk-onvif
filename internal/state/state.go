@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
 	"sstmk-onvif/internal/config"
 )
 
@@ -21,6 +22,12 @@ func LoadOrInit(path string, cfgDevices []config.Device) (*State, error) {
 
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return nil, fmt.Errorf("ошибка создания пути: %w", err)
+		}
+
+		// Отладочный вывод
+		log.Printf("Инициализация state.json с %d устройствами из конфига", len(cfgDevices))
+		for i, dev := range cfgDevices {
+			log.Printf("Device %d: UID=%s, Name=%s, Vendor=%s, Serial=%s", i, dev.UID, dev.Name, dev.Vendor, dev.SerialNumber)
 		}
 
 		initData := State{
@@ -45,7 +52,7 @@ func LoadOrInit(path string, cfgDevices []config.Device) (*State, error) {
 	} else if err != nil {
 		// ТУТ НУЖНО ПРОБРОСИТЬ ИСКЛЮЧЕНИЕ НАВЕРХ
 		return nil, fmt.Errorf("фатальная ошибка при проверке файла %s: %w", path, err)
-		//----------------------
+		// ----------------------
 	} else {
 		// --- Путь 3: Файл существует. Загружаем его. ---
 		log.Printf("файл '%s' существует, загрузка...\n", path)

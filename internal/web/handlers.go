@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"sstmk-onvif/internal/events"
+	"sstmk-onvif/internal/registry"
 	"sstmk-onvif/internal/state"
 )
 
@@ -53,7 +54,12 @@ func (s *Server) handleDeviceAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 type devicePatchRequest struct {
-	Enabled *bool `json:"enabled"`
+	Enabled      *bool   `json:"enabled"`
+	Online       *bool   `json:"online"`
+	Name         *string `json:"name"`
+	Vendor       *string `json:"vendor"`
+	SerialNumber *string `json:"serialNumber"`
+	Version      *string `json:"version"`
 }
 
 // /api/v1/device/{id}
@@ -93,34 +99,92 @@ func (s *Server) handleDevicePutch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Enabled == nil {
+	if req.Enabled == nil && req.Name == nil && req.Vendor == nil && req.SerialNumber == nil && req.Version == nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"ok":    false,
-			"error": "field 'enabled' is required",
+			"error": "at least one field is required",
 		})
 		return
 	}
 
-	// 1) Обновляем флаг в реестре
-	s.reg.SetEnabled(id, *req.Enabled)
-
-	// 2) (опционально) старт/стоп SSTMK-обмена
-	if *req.Enabled {
-		// s.sstmk.Start(id) // если понадобится
-	} else {
-		// s.sstmk.Stop(id)
+	// Получаем текущее устройство
+	dev, ok := s.reg.Get(id)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"ok":    false,
+			"error": "device not found",
+		})
+		return
 	}
 
-	// 3) Берём свежее состояние всех устройств и пишем в state.json
+	// Обновляем поля
+	if req.Enabled != nil {
+		s.reg.SetEnabled(id, *req.Enabled)
+		dev.Enabled = *req.Enabled
+		// Для устройств из конфига (gate-001, gate-002, gate-003, gate-004) online всегда true
+		if strings.HasPrefix(id, "gate-") {
+			s.reg.SetOnline(id, true)
+			dev.Online = true
+		} else if !*req.Enabled {
+			// Для остальных устройств при выключении сбрасываем online
+			s.reg.SetOnline(id, false)
+			dev.Online = false
+		}
+	}
+	if req.Online != nil && !strings.HasPrefix(id, "gate-") {
+		// Поле online можно редактировать только у не-gate устройств
+		s.reg.SetOnline(id, *req.Online)
+		dev.Online = *req.Online
+	}
+	if req.Name != nil {
+		dev.Name = *req.Name
+	}
+	if req.Vendor != nil {
+		dev.Vendor = *req.Vendor
+	}
+	if req.SerialNumber != nil {
+		dev.SerialNumber = *req.SerialNumber
+	}
+	if req.Version != nil {
+		dev.Version = *req.Version
+	}
+
+	// Обновляем устройство в реестре
+	s.reg.Update(dev)
+
+	// Для gate-устройств принудительно устанавливаем online=true в registry
+	if strings.HasPrefix(id, "gate-") {
+		s.reg.SetOnline(id, true)
+	}
+
+	// 2) (опционально) старт/стоп SSTMK-обмена
+	if req.Enabled != nil {
+		if *req.Enabled {
+			// s.sstmk.Start(id) // если понадобится
+		} else {
+			// s.sstmk.Stop(id)
+		}
+	}
+
+	// 3) Сохраняем в state.json при любых изменениях
 	devs := s.reg.List()
-	if err := state.SaveDevices(s.statePath, devs); err != nil {
-		// Не роняем запрос, но логируем
-		// Можно, если хочешь, вернуть 500, но обычно достаточно лога
+	// Фильтруем только встроенные устройства (gate-*) для сохранения в state.json
+	builtInDevs := make([]registry.Device, 0)
+	for _, dev := range devs {
+		if strings.HasPrefix(dev.UID, "gate-") {
+			// Для gate-устройств принудительно устанавливаем online=true перед сохранением
+			dev.Online = true
+			// Также обновляем в registry
+			s.reg.SetOnline(dev.UID, true)
+			builtInDevs = append(builtInDevs, dev)
+		}
+	}
+	if err := state.SaveDevices(s.statePath, builtInDevs); err != nil {
 		log.Printf("state save error: %v", err)
 	}
 
 	// 4) Возвращаем обновлённое устройство
-	dev, _ := s.reg.Get(id)
+	dev, _ = s.reg.Get(id)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":   true,
