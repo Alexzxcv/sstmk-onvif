@@ -1,0 +1,68 @@
+{
+  "devices": [
+    {
+      "uid": "gate-001",
+      "serialNumber": "FD-0001",
+      "name": "Frame-Detector-001",
+      "vendor": "SSTMK",
+      "object": "area/A1",
+      "ip": "",
+      "port": "9001",
+      "version": "1.0.0",
+      "model": "Frame-Detector",
+      "revision": "HW-FD-01",
+      "adapter": "tcp",
+      "adapter_ds": "127.0.0.1:9001",
+      "enabled": true,
+      "online": true
+    },
+    {
+      "uid": "gate-002",
+      "serialNumber": "FD-0002",
+      "name": "Frame-Detector-002",
+      "vendor": "SSTMK",
+      "object": "area/A1",
+      "ip": "",
+      "port": "9002",
+      "version": "1.0.0",
+      "model": "Frame-Detector",
+      "revision": "HW-FD-01",
+      "adapter": "tcp",
+      "adapter_ds": "127.0.0.1:9002",
+      "enabled": true,
+      "online": true
+    },
+    {
+      "uid": "gate-003",
+      "serialNumber": "FD-0003",
+      "name": "Frame-Detector-003",
+      "vendor": "SSTMK",
+      "object": "area/A1",
+      "ip": "",
+      "port": "9003",
+      "version": "1.0.0",
+      "model": "Frame-Detector",
+      "revision": "HW-FD-01",
+      "adapter": "tcp",
+      "adapter_ds": "127.0.0.1:9003",
+      "enabled": true,
+      "online": true
+    },
+    {
+      "uid": "gate-004",
+      "serialNumber": "FD-0004",
+      "name": "Frame-Detector-004",
+      "vendor": "SSTMK",
+      "object": "area/A1",
+      "ip": "",
+      "port": "9004",
+      "version": "1.0.0",
+      "model": "Frame-Detector",
+      "revision": "HW-FD-01",
+      "adapter": "tcp",
+      "adapter_ds": "127.0.0.1:9004",
+      "enabled": false,
+      "online": true
+    }
+  ]
+}
